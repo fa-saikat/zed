@@ -726,8 +726,20 @@ impl WgpuContext {
         self.backend
     }
 
+    /// Whether instance data goes in a texture instead of a storage buffer:
+    /// on WebGL, and on native GL drivers without vertex storage buffers
+    /// (e.g. Panfrost on Mali-G31), where the storage-buffer pipelines fail
+    /// validation.
     pub fn uses_webgl_instance_data(&self) -> bool {
-        matches!(self.backend, WgpuBackend::Gl) && cfg!(target_family = "wasm")
+        if cfg!(target_family = "wasm") {
+            return matches!(self.backend, WgpuBackend::Gl);
+        }
+        self.adapter.get_info().backend == wgpu::Backend::Gl
+            && !self
+                .adapter
+                .get_downlevel_capabilities()
+                .flags
+                .contains(wgpu::DownlevelFlags::VERTEX_STORAGE)
     }
 
     pub fn supports_dual_source_blending(&self) -> bool {
